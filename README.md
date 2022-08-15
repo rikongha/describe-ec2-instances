@@ -3,7 +3,7 @@ ___
 A script to find and return server information and attached EBS volumes.
 
 ## Configure
-set credentials in the AWS credentials profile, and set environment variable 
+set credentials in the AWS credentials file, and set environment variable 
 - `ENVIRONMENT = local` if running locally and 
 - `PROFILE = {profilename}` if not using default.
 
