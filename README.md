@@ -13,3 +13,6 @@ run script using `python list.py {name-of-server}` to find a specific server or 
 
 ## Dependencies
 - python3
+- boto3
+- tabulate
+Ensure to have the dependencies above installed, you can run `pip install requirements.txt`.
