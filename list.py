@@ -1,7 +1,8 @@
 import boto3
 import logging
 import os
-
+from tabulate import tabulate
+import argparse
 
 ec2_instances = []
 volume_sizes=[]
@@ -13,12 +14,12 @@ def get_attached_volume_size(instances, ec2):
         'Values':[instances['InstanceId']]}]
     )
 
-    volumeSize = 0
-    GiB_TO_GB = 1.073741824
+    totalEbsVolumeInInstanceSize = 0
+    GiB_TO_GB_UNIT = 1.073741824
+    
     for volume in (describedVolumes["Volumes"]):
-        volumeSize += (volume["Size"])
-
-    return volumeSize * GiB_TO_GB
+        totalEbsVolumeInInstanceSize += (volume["Size"])
+        return totalEbsVolumeInInstanceSize * GiB_TO_GB_UNIT
 
 # Helper function used to validate input
 def check_defined(reference, reference_name):
@@ -37,17 +38,16 @@ def get_server_by_name(client, name):
 def get_all_servers(client):
     return client.describe_instances()
 
-def sort_by_size():
-    return #TODO sort results
-
+def sort_instances_by_volume_size(instances):
+    return sorted(instances, key=lambda i: i['VolumeSize'], 
+        reverse=True)
 
 def lambda_handler(event, context):
     logging.basicConfig(level=logging.ERROR)
 
     try:
-        logging.info("-----------EC2 Instance Description------------")
+        logging.info("-----------EC2 Instance(s) Description------------")
 
-        # check_defined()
         region = 'eu-central-1'
         environment = os.getenv('ENVIRONMENT')
 
@@ -58,14 +58,15 @@ def lambda_handler(event, context):
             session = boto3.Session(profile_name=awsProfile, region_name=region)
         else:  
             session = boto3.Session(region_name=region)
-            check_defined(event, 'event')
-            # TODO get input from events and call appropriate fn
-
-
+        
+        check_defined(event, 'event')
+        filter = event['filter']
         ec2_client = session.client('ec2')
 
-        reservations = get_server_by_name(ec2_client, 'jenkins')
-
+        if '*' == filter:
+            reservations = get_all_servers(ec2_client)
+        else:
+            reservations = get_server_by_name(ec2_client, filter)
 
         for reservation in reservations["Reservations"]:
             for instance in reservation['Instances']:
@@ -80,13 +81,13 @@ def lambda_handler(event, context):
                     'PrivateIp': instance.get('PrivateIpAddress', ''),
                     'SubnetId': instance.get('SubnetId', ''),
                     'VpcId': instance.get('VpcId', ''),
-                    'volume.size': volumeSize           
+                    'VolumeSize': volumeSize           
                     })
-                    
-        # TODO Print result to console  in tabular format
-        header = ['instance-id', 'instance-type', 'status', 'private-ip', 'PublicIp', 
-            'public-ip', 'total-size-ebs-volumes']
         
+        sorted_instances = sort_instances_by_volume_size(ec2_instances)
+        
+        print(tabulate(sorted_instances, headers="keys"))
+
         total_of_all_server_volumes = sum(volume_sizes)
         print(f'Total volume across all servers: {total_of_all_server_volumes:.2f} GB')
 
@@ -96,4 +97,10 @@ def lambda_handler(event, context):
         )
 
 if __name__ == '__main__': 
-    lambda_handler(None, None)
+    parser = argparse.ArgumentParser(description='Get description of EC2 instances and associated EBS volumes')
+    parser.add_argument('filter', nargs='?', default='*', help='Pass in wildcard or name of instance')
+    args = parser.parse_args()
+
+    event = {}
+    event['filter'] = args.filter
+    lambda_handler(event, None)
