@@ -20,7 +20,8 @@ def get_attached_volume_size(instances, ec2):
     
     for volume in (describedVolumes["Volumes"]):
         totalEbsVolumeInInstanceSize += (volume["Size"])
-        return totalEbsVolumeInInstanceSize * GiB_TO_GB_UNIT
+    
+    return totalEbsVolumeInInstanceSize * GiB_TO_GB_UNIT
 
 # Helper function used to validate input
 def check_defined(reference, reference_name):
