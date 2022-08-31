@@ -5,7 +5,9 @@ from tabulate import tabulate
 import argparse
 
 ec2_instances = []
-volume_sizes=[]
+volume_sizes = []
+GiB_TO_GB_UNIT = 1.073741824
+
 
 # Get capacity of attached volumes in GB
 def get_attached_volume_size(instances, ec2):
@@ -15,11 +17,11 @@ def get_attached_volume_size(instances, ec2):
     )
 
     totalEbsVolumeInInstanceSize = 0
-    GiB_TO_GB_UNIT = 1.073741824
     
     for volume in (describedVolumes["Volumes"]):
         totalEbsVolumeInInstanceSize += (volume["Size"])
-        return totalEbsVolumeInInstanceSize * GiB_TO_GB_UNIT
+    
+    return totalEbsVolumeInInstanceSize * GiB_TO_GB_UNIT
 
 # Helper function used to validate input
 def check_defined(reference, reference_name):
@@ -68,7 +70,7 @@ def lambda_handler(event, context):
         else:
             reservations = get_server_by_name(ec2_client, filter)
 
-        for reservation in reservations["Reservations"]:
+        for reservation in reservations['Reservations']:
             for instance in reservation['Instances']:
                 volumeSize = get_attached_volume_size(instance, ec2_client)
                 volume_sizes.append(volumeSize)
