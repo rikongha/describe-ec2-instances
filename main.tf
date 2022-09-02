@@ -14,6 +14,5 @@ terraform {
 }
 
 provider "aws" {
-    profile = "cocus"
-    region = "eu-central-1"
+    profile = "default"
 }
